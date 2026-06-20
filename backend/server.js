@@ -1,93 +1,67 @@
 const express = require("express");
 const cors = require("cors");
+const mongoose = require("mongoose");
+const dns = require("dns");
+require("dotenv").config();
+
+const authRoutes = require("./routes/authRoutes");
+const authMiddleware = require("./middleware/authMiddleware");
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
+
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
 app.use(cors());
 app.use(express.json());
 
-let todos = [];
-let idCounter = 1;
+app.use("/api/auth", authRoutes);
 
-/*
-    CREATE TODO
-*/
-app.post("/todos", (req, res) => {
-    const { title } = req.body;
+// MongoDB
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB Connected"))
+  .catch((err) => console.log(err));
 
-    if (!title || title.trim() === "") {
-        return res.status(400).json({
-            message: "Title is required"
-        });
-    }
+// Todo Schema
+const todoSchema = new mongoose.Schema(
+  {
+    title: String,
+    completed: { type: Boolean, default: false },
+    userId: String,
+  },
+  { timestamps: true }
+);
 
-    const newTodo = {
-        id: idCounter++,
-        title,
-        completed: false
-    };
+const Todo = mongoose.model("Todo", todoSchema);
 
-    todos.push(newTodo);
-
-    res.status(201).json(newTodo);
+// CREATE TODO
+app.post("/todos", authMiddleware, async (req, res) => {
+  const todo = await Todo.create({
+    title: req.body.title,
+    userId: req.user.id,
+  });
+  res.json(todo);
 });
 
-/*
-    READ ALL TODOS
-*/
-app.get("/todos", (req, res) => {
-    res.json(todos);
+// GET TODOS (USER ONLY)
+app.get("/todos", authMiddleware, async (req, res) => {
+  const todos = await Todo.find({ userId: req.user.id });
+  res.json(todos);
 });
 
-/*
-    UPDATE TODO
-*/
-app.put("/todos/:id", (req, res) => {
-    const id = parseInt(req.params.id);
-
-    const todo = todos.find(todo => todo.id === id);
-
-    if (!todo) {
-        return res.status(404).json({
-            message: "Todo not found"
-        });
-    }
-
-    const { title, completed } = req.body;
-
-    if (title !== undefined) {
-        todo.title = title;
-    }
-
-    if (completed !== undefined) {
-        todo.completed = completed;
-    }
-
-    res.json(todo);
+// UPDATE TODO
+app.put("/todos/:id", authMiddleware, async (req, res) => {
+  const todo = await Todo.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+  });
+  res.json(todo);
 });
 
-/*
-    DELETE TODO
-*/
-app.delete("/todos/:id", (req, res) => {
-    const id = parseInt(req.params.id);
-
-    const index = todos.findIndex(todo => todo.id === id);
-
-    if (index === -1) {
-        return res.status(404).json({
-            message: "Todo not found"
-        });
-    }
-
-    todos.splice(index, 1);
-
-    res.json({
-        message: "Todo deleted successfully"
-    });
+// DELETE TODO
+app.delete("/todos/:id", authMiddleware, async (req, res) => {
+  await Todo.findByIdAndDelete(req.params.id);
+  res.json({ message: "Deleted" });
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}  `);
-});
+app.listen(PORT, () => console.log("Server running"));
