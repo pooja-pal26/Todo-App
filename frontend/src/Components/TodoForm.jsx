@@ -14,7 +14,8 @@ export default function TodoForm() {
   const [todos, setTodos] = useState([]);
   const [editId, setEditId] = useState(null);
   const [filter, setFilter] = useState("all");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState("");                // Frontend Search
+  const [backendSearch, setBackendSearch] = useState(""); // Backend Search
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
@@ -47,10 +48,8 @@ export default function TodoForm() {
 
   const fetchTodos = async () => {
     try {
-      console.log("Current Page:", page);
-
       const res = await axios.get(
-        `http://localhost:5000/todos?page=${page}&limit=5`,
+        `http://localhost:5000/todos?page=${page}&limit=5&search=${backendSearch}`,
         {
           headers: {
             Authorization: token,
@@ -58,12 +57,10 @@ export default function TodoForm() {
         }
       );
 
-      console.log("API Response:", res.data);
-
       setTodos(res.data.todos);
       setTotalPages(res.data.totalPages);
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.log(err);
     }
   };
 
@@ -170,6 +167,10 @@ export default function TodoForm() {
     fetchProfile();
   }, []);
 
+  useEffect(() => {
+  fetchTodos();
+}, [page, backendSearch]);
+
 
   return (
     <div
@@ -226,7 +227,6 @@ export default function TodoForm() {
                     Log out
                   </button>
                 </div>
-
               </div>
 
 
@@ -236,10 +236,7 @@ export default function TodoForm() {
                 <div className="row mb-4">
 
                   <div
-                    className="col-md-4 mb-3"
-                    onClick={() => setFilter("all")}
-                    style={{ cursor: "pointer" }}
-                  >
+                    className="col-md-4 mb-3" onClick={() => setFilter("all")} style={{ cursor: "pointer" }}>
                     <div
                       className="card border-0 shadow-sm"
                       style={{
@@ -297,7 +294,6 @@ export default function TodoForm() {
                       </div>
                     </div>
                   </div>
-
                 </div>
 
                 {/* INPUT */}
@@ -327,13 +323,10 @@ export default function TodoForm() {
             </div>
           </div>
         </div>
-        <div
-          className="mx-auto mb-3"
-          style={{ maxWidth: "650px" }}
-        >
-          <div className="input-group shadow-sm">
-            <span className="input-group-text">🔍</span>
 
+        <div className="mx-auto mb-3" style={{ maxWidth: "650px" }}>
+          <div className="input-group shadow-sm">
+            <span className="input-group-text"><i className="bi bi-search"></i></span>
             <input
               type="text"
               className="form-control"
@@ -344,9 +337,18 @@ export default function TodoForm() {
           </div>
         </div>
 
-        <div
-          className="mx-auto mb-3"
-          style={{ maxWidth: "650px" }}>
+        <div className="mb-3">
+          <label className="fw-bold">Backend Search</label>
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Search from database..."
+            value={backendSearch}
+            onChange={(e) => setBackendSearch(e.target.value)}
+          />
+        </div>
+
+        <div className="mx-auto mb-3" style={{ maxWidth: "650px" }}>
           <small className="text-muted d-block mt-2">
             Showing {filteredTodos.length} of {todos.length} todos
           </small>
@@ -355,14 +357,10 @@ export default function TodoForm() {
         {/* TODO LIST */}
         <div className="row justify-content-center">
           <div className="col-lg-7">
-
             {filteredTodos.map((todo) => (
               <div
-                key={todo._id}
-                className="card shadow-sm border rounded-4 mb-3 todo-card bg-white"
-              >
+                key={todo._id} className="card shadow-sm border rounded-4 mb-3 todo-card bg-white">
                 <div className="card-body d-flex justify-content-between align-items-center">
-
                   <div>
                     <h5
                       className={`fw-bold mb-1 ${todo.completed
@@ -376,16 +374,12 @@ export default function TodoForm() {
 
                   <div>
                     <button
-                      className="btn btn-success btn-sm me-2"
-                      onClick={() => toggleComplete(todo)}
-                    >
+                      className="btn btn-success btn-sm me-2" onClick={() => toggleComplete(todo)}>
                       {todo.completed ? "Undo" : "Complete"}
                     </button>
 
                     <button
-                      className="btn btn-warning btn-sm me-2"
-                      onClick={() => editTodo(todo)}
-                    >
+                      className="btn btn-warning btn-sm me-2" onClick={() => editTodo(todo)}>
                       Edit
                     </button>
 
