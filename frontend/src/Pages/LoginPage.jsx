@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -35,6 +36,28 @@ export default function LoginPage() {
       alert("Invalid Email or Password ❌");
     }
   };
+
+
+  const handleGoogleLogin = async (credentialResponse) => {
+    try {
+      const res = await axios.post(
+        "http://localhost:5000/api/auth/google",
+        {
+          token: credentialResponse.credential,
+        }
+      );
+
+      localStorage.setItem("token", res.data.token);
+
+      alert("Google Login Successful ✅");
+
+      navigate("/todo");
+    } catch (error) {
+      console.error(error);
+      alert("Google Login Failed ❌");
+    }
+  };
+
 
   return (
     <div
@@ -111,6 +134,19 @@ export default function LoginPage() {
               >
                 Login
               </button>
+
+              <div className="text-center my-3">
+                <span className="text-muted">OR</span>
+              </div>
+
+              <div className="d-flex justify-content-center">
+                <GoogleLogin
+                  onSuccess={handleGoogleLogin}
+                  onError={() => {
+                    alert("Google Login Failed");
+                  }}
+                />
+              </div>
 
             </form>
 

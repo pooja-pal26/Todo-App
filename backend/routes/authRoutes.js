@@ -1,42 +1,30 @@
 const express = require("express");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
-const User = require("../models/User");
-
 const router = express.Router();
 
-// REGISTER
-router.post("/register", async (req, res) => {
-  const { name, email, password } = req.body;
+const authMiddleware = require("../middleware/authMiddleware");
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+const {
+  registerUser,
+  loginUser,
+  googleLogin,
+  getProfile,
+  updateProfile,
+} = require("../controllers/authControllers");
 
-  await User.create({
-    name,
-    email,
-    password: hashedPassword,
-  });
+// Register
+router.post("/register", registerUser);
 
-  res.json({ message: "User registered" });
-});
+// Login
+router.post("/login", loginUser);
 
-// LOGIN
-router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+// Google Login
+router.post("/google", googleLogin);
 
-  const user = await User.findOne({ email });
-  if (!user) return res.status(400).json({ message: "User not found" });
+// Get Profile
+router.get("/profile", authMiddleware, getProfile);
 
-  const match = await bcrypt.compare(password, user.password);
-  if (!match) return res.status(400).json({ message: "Wrong password" });
+// Update Profile
+router.put("/profile", authMiddleware, updateProfile);
 
-  const token = jwt.sign(
-    { id: user._id },
-    process.env.JWT_SECRET,
-    { expiresIn: "1d" }
-  );
-
-  res.json({ token });
-});
 
 module.exports = router;
